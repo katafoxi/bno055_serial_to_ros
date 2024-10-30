@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(mpu6050_serial_to_imu)
+project(bno055_serial_to_imu)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -26,7 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES mpu6050_serial_to_imu
+#  LIBRARIES bno055_serial_to_imu
   CATKIN_DEPENDS roscpp geometry_msgs sensor_msgs serial std_msgs std_srvs tf
 #  DEPENDS system_lib
 )
@@ -43,10 +43,10 @@ include_directories(
 )
 
 ## Declare a C++ executable
-add_executable(mpu6050_serial_to_imu_node src/mpu6050_serial_to_imu_node.cpp)
+add_executable(bno055_serial_to_imu_node src/bno055_serial_to_imu_node.cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(mpu6050_serial_to_imu_node
+target_link_libraries(bno055_serial_to_imu_node
   ${catkin_LIBRARIES}
 )
 
@@ -56,7 +56,7 @@ target_link_libraries(mpu6050_serial_to_imu_node
 
 
 ## Mark executables and/or libraries for installation
-install(TARGETS mpu6050_serial_to_imu_node
+install(TARGETS bno055_serial_to_imu_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

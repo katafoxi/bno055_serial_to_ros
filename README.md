@@ -1,4 +1,4 @@
-mpu6050_serial_to_imu
+bno055_serial_to_imu
 =
 
 This is a simple ROS node to connect an InvenSense MPU 6050 IMU  (I used a cheap GY-521 breakout board) to ROS.
