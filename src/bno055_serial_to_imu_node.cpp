@@ -88,14 +88,13 @@ int main(int argc, char** argv)
   std::string input;
   std::string read;
 
-
   typedef struct {
-    char  char_0;
-    char  char_1;
-    float               float_s[10];
-    unsigned long long  message_count;
-    char  char_2;
-    char  char_3;
+      char  char_0;   //'$'
+      char  char_1;   //'0x03'
+      float               float_s[10];  //quaternion[w,x,y,z], qyro, accel
+      unsigned long long  message_count;
+      char  char_2;   //'\r',
+      char  char_3;   //'\n'
   } custom_struct;
 
   while(ros::ok())
@@ -136,6 +135,7 @@ int main(int argc, char** argv)
                 float zf = input_message.float_s[3];
 
                 tf::Quaternion orientation(xf, yf, zf, wf);
+                orientation.normalize();
 
                 if (!zero_orientation_set)
                 {
