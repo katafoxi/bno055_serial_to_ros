@@ -97,8 +97,12 @@ int main(int argc, char** argv)
       char  char_3;   //'\n'
   } custom_struct;
 
+  int expected_message_size = 52;
+
   while(ros::ok())
   {
+    ROS_DEBUG("custom struct size = %d ", sizeof(custom_struct));
+    ROS_DEBUG("unsigned long long, message_count size = %lli", sizeof(unsigned long long));
     try
     {
       if (ser.isOpen())
@@ -109,7 +113,7 @@ int main(int argc, char** argv)
           read = ser.read(ser.available());
           ROS_DEBUG("read %i new characters from serial port, adding to %i characters of old input.", (int)read.size(), (int)input.size());
           input += read;
-          while (input.length() >= 52) // while there might be a complete package in input
+          while (input.length() >= expected_message_size) // while there might be a complete package in input
           {
             //parse for data packets
             data_packet_start = input.find("$\x03");
@@ -118,7 +122,7 @@ int main(int argc, char** argv)
             if (data_packet_start != std::string::npos)
             {
               ROS_DEBUG("found possible start of data packet at position %d", data_packet_start);
-              if ((input.length() >= data_packet_start + 52) && (input.compare(data_packet_start + 50, 2, "\r\n") == 0))  //check if positions 26,27 exist, then test values
+              if ((input.length() >= data_packet_start + expected_message_size) && (input.compare(data_packet_start + (expected_message_size-2), 2, "\r\n") == 0))  //check if positions 26,27 exist, then test values
               {
                 ROS_DEBUG("seems to be a real data package: long enough and found end characters");
                 // get quaternion values
@@ -128,6 +132,7 @@ int main(int argc, char** argv)
                 const custom_struct*  buffer_custom   = reinterpret_cast<custom_struct const*>(buffer_char);
 
                 custom_struct input_message = *(buffer_custom);
+                ROS_DEBUG("input_message size = %d ", sizeof(input_message));
   
                 float wf = input_message.float_s[0];
                 float xf = input_message.float_s[1];
@@ -168,7 +173,7 @@ int main(int argc, char** argv)
 
                 unsigned long long received_message_number = input_message.message_count;
                 
-                ROS_DEBUG("received message number: %lli", received_message_number);
+                ROS_DEBUG("received message number: %lld", received_message_number);
 
                 if (received_message) // can only check for continuous numbers if already received at least one packet
                 {
@@ -209,11 +214,11 @@ int main(int argc, char** argv)
                   transform.setRotation(differential_rotation);
                   tf_br.sendTransform(tf::StampedTransform(transform, measurement_time, tf_parent_frame_id, tf_frame_id));
                 }
-                input.erase(0, data_packet_start + 50); // delete everything up to and including the processed packet
+                input.erase(0, data_packet_start + (expected_message_size-2)); // delete everything up to and including the processed packet
               }
               else
               {
-                if (input.length() >= data_packet_start + 50)
+                if (input.length() >= data_packet_start + (expected_message_size-2))
                 {
                   input.erase(0, data_packet_start + 1); // delete up to false data_packet_start character so it is not found again
                 }
