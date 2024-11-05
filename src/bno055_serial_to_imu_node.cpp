@@ -37,8 +37,8 @@ int main(int argc, char** argv)
   double linear_acceleration_stddev;
   double angular_velocity_stddev;
   double orientation_stddev;
-  uint8_t last_received_message_number;
-  bool received_message = false;
+  uint8_t last_received_packet_number;
+  bool received_packet = false;
   int data_packet_start;
 
   tf::Quaternion orientation;
@@ -88,21 +88,10 @@ int main(int argc, char** argv)
   std::string input;
   std::string read;
 
-  typedef struct {
-      char  char_0;   //'$'
-      char  char_1;   //'0x03'
-      float               float_s[10];  //quaternion[w,x,y,z], qyro, accel
-      unsigned long long  message_count;
-      char  char_2;   //'\r',
-      char  char_3;   //'\n'
-  } custom_struct;
-
-  int expected_message_size = 52;
+  int expected_packet_size = 48;
 
   while(ros::ok())
   {
-    ROS_DEBUG("custom struct size = %d ", sizeof(custom_struct));
-    ROS_DEBUG("unsigned long long, message_count size = %lli", sizeof(unsigned long long));
     try
     {
       if (ser.isOpen())
@@ -113,7 +102,7 @@ int main(int argc, char** argv)
           read = ser.read(ser.available());
           ROS_DEBUG("read %i new characters from serial port, adding to %i characters of old input.", (int)read.size(), (int)input.size());
           input += read;
-          while (input.length() >= expected_message_size) // while there might be a complete package in input
+          while (input.length() >= expected_packet_size) // while there might be a complete package in input
           {
             //parse for data packets
             data_packet_start = input.find("$\x03");
@@ -122,22 +111,20 @@ int main(int argc, char** argv)
             if (data_packet_start != std::string::npos)
             {
               ROS_DEBUG("found possible start of data packet at position %d", data_packet_start);
-              if ((input.length() >= data_packet_start + expected_message_size) && (input.compare(data_packet_start + (expected_message_size-2), 2, "\r\n") == 0))  //check if positions 26,27 exist, then test values
+              if ((input.length() >= data_packet_start + expected_packet_size) && (input.compare(data_packet_start + (expected_packet_size-2), 2, "\r\n") == 0))  //check if positions 26,27 exist, then test values
               {
                 ROS_DEBUG("seems to be a real data package: long enough and found end characters");
+                ROS_DEBUG("input size = %ld ", input.length());
+                std::string packet = input.substr(data_packet_start,  expected_packet_size);
+                ROS_DEBUG("packet size is %i bytes ", (int)packet.size());
+
                 // get quaternion values
+                // 4 char from bytestring to float
+                float wf = * (reinterpret_cast<float const*> (packet.substr(2, 4).c_str()));
+                float xf = * (reinterpret_cast<float const*> (packet.substr(6, 4).c_str()));
+                float yf = * (reinterpret_cast<float const*> (packet.substr(10, 4).c_str()));
+                float zf = * (reinterpret_cast<float const*> (packet.substr(14, 4).c_str()));
 
-                // simple usage
-                const char*           buffer_char     = input.c_str();
-                const custom_struct*  buffer_custom   = reinterpret_cast<custom_struct const*>(buffer_char);
-
-                custom_struct input_message = *(buffer_custom);
-                ROS_DEBUG("input_message size = %d ", sizeof(input_message));
-  
-                float wf = input_message.float_s[0];
-                float xf = input_message.float_s[1];
-                float yf = input_message.float_s[2];
-                float zf = input_message.float_s[3];
 
                 tf::Quaternion orientation(xf, yf, zf, wf);
                 orientation.normalize();
@@ -159,40 +146,38 @@ int main(int argc, char** argv)
                 // FIFO frequency 100 Hz -> factor 10 ?
                 // seems 25 is the right factor
                 //TODO: check / test if rotational velocities are correct
-                float gxf = input_message.float_s[4] * (M_PI/180.0) ;
-                float gyf = input_message.float_s[5] * (M_PI/180.0);
-                float gzf = input_message.float_s[6] * (M_PI/180.0);
+                float gxf = * (reinterpret_cast<float const*> (packet.substr(18, 4).c_str())) * (M_PI/180.0) ;
+                float gyf = * (reinterpret_cast<float const*> (packet.substr(22, 4).c_str())) * (M_PI/180.0);
+                float gzf = * (reinterpret_cast<float const*> (packet.substr(26, 4).c_str())) * (M_PI/180.0);
 
                 // get acelerometer values
                 // calculate accelerations in m/s²
-                float axf = input_message.float_s[7];
-                float ayf = input_message.float_s[8];
-                float azf = input_message.float_s[9];
+                float axf = * (reinterpret_cast<float const*> (packet.substr(30, 4).c_str()));
+                float ayf = * (reinterpret_cast<float const*> (packet.substr(34, 4).c_str()));
+                float azf = * (reinterpret_cast<float const*> (packet.substr(38, 4).c_str()));
 
-                //uint8_t received_message_number = input[data_packet_start + 25];
-
-                unsigned long long received_message_number = input_message.message_count;
+                uint32_t received_packet_number = *(reinterpret_cast<float const*> (packet.substr(42, 4).c_str()));
                 
-                ROS_DEBUG("received message number: %lld", received_message_number);
+                ROS_DEBUG("received packet number: %d", received_packet_number);
 
-                if (received_message) // can only check for continuous numbers if already received at least one packet
+                if (received_packet) // can only check for continuous numbers if already received at least one packet
                 {
-                  uint8_t message_distance = received_message_number - last_received_message_number;
-                  if ( message_distance > 1 )
+                  uint8_t packet_distance = received_packet_number - last_received_packet_number;
+                  if ( packet_distance > 1 )
                   {
-                    ROS_WARN_STREAM("Missed " << message_distance - 1 << " MPU6050 data packets from arduino.");
+                    ROS_WARN_STREAM("Missed " << packet_distance - 1 << " BNO055 data packets from Pico.");
                   }
                 }
                 else
                 {
-                  received_message = true;
+                  received_packet = true;
                 }
-                last_received_message_number = received_message_number;
+                last_received_packet_number = received_packet_number;
 
                 // calculate measurement time
                 ros::Time measurement_time = ros::Time::now() + ros::Duration(time_offset_in_seconds);
 
-                // publish imu message
+                // publish imu packet
                 imu.header.stamp = measurement_time;
                 imu.header.frame_id = frame_id;
 
@@ -214,11 +199,11 @@ int main(int argc, char** argv)
                   transform.setRotation(differential_rotation);
                   tf_br.sendTransform(tf::StampedTransform(transform, measurement_time, tf_parent_frame_id, tf_frame_id));
                 }
-                input.erase(0, data_packet_start + (expected_message_size-2)); // delete everything up to and including the processed packet
+                input.erase(0, data_packet_start + (expected_packet_size-2)); // delete everything up to and including the processed packet
               }
               else
               {
-                if (input.length() >= data_packet_start + (expected_message_size-2))
+                if (input.length() >= data_packet_start + (expected_packet_size-2))
                 {
                   input.erase(0, data_packet_start + 1); // delete up to false data_packet_start character so it is not found again
                 }
