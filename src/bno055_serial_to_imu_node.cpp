@@ -111,19 +111,21 @@ int main(int argc, char** argv)
             if (data_packet_start != std::string::npos)
             {
               ROS_DEBUG("found possible start of data packet at position %d", data_packet_start);
-              if ((input.length() >= data_packet_start + expected_packet_size) && (input.compare(data_packet_start + (expected_packet_size-2), 2, "\r\n") == 0))  //check if positions 26,27 exist, then test values
+              if ((input.length() >= data_packet_start + expected_packet_size) && (input.compare(data_packet_start + (expected_packet_size-2), 2, "\r\n") == 0))  //check if positions 47, 48 exist, then test values
               {
                 ROS_DEBUG("seems to be a real data package: long enough and found end characters");
                 ROS_DEBUG("input size = %ld ", input.length());
-                std::string packet = input.substr(data_packet_start,  expected_packet_size);
-                ROS_DEBUG("packet size is %i bytes ", (int)packet.size());
+
+                // cut off start chars $\03 and end chars \r\n in packet
+                std::string packet = input.substr(data_packet_start + 2,  expected_packet_size - 4);
+                ROS_DEBUG("packet size without start and end chars is %i bytes ", (int)packet.size());
 
                 // get quaternion values
                 // 4 char from bytestring to float
-                float wf = * (reinterpret_cast<float const*> (packet.substr(2, 4).c_str()));
-                float xf = * (reinterpret_cast<float const*> (packet.substr(6, 4).c_str()));
-                float yf = * (reinterpret_cast<float const*> (packet.substr(10, 4).c_str()));
-                float zf = * (reinterpret_cast<float const*> (packet.substr(14, 4).c_str()));
+                float wf = * (reinterpret_cast<float const*> (packet.substr(0, 4).c_str()));
+                float xf = * (reinterpret_cast<float const*> (packet.substr(4, 4).c_str()));
+                float yf = * (reinterpret_cast<float const*> (packet.substr(8, 4).c_str()));
+                float zf = * (reinterpret_cast<float const*> (packet.substr(12, 4).c_str()));
 
 
                 tf::Quaternion orientation(xf, yf, zf, wf);
@@ -141,22 +143,18 @@ int main(int argc, char** argv)
 
                 // get gyro values
                 // calculate rotational velocities in rad/s
-                // without the last factor the velocities were too small
-                // http://www.i2cdevlib.com/forums/topic/106-get-angular-velocity-from-mpu-6050/
-                // FIFO frequency 100 Hz -> factor 10 ?
-                // seems 25 is the right factor
                 //TODO: check / test if rotational velocities are correct
-                float gxf = * (reinterpret_cast<float const*> (packet.substr(18, 4).c_str())) * (M_PI/180.0) ;
-                float gyf = * (reinterpret_cast<float const*> (packet.substr(22, 4).c_str())) * (M_PI/180.0);
-                float gzf = * (reinterpret_cast<float const*> (packet.substr(26, 4).c_str())) * (M_PI/180.0);
+                float gxf = * (reinterpret_cast<float const*> (packet.substr(16, 4).c_str())) * (M_PI/180.0) ;
+                float gyf = * (reinterpret_cast<float const*> (packet.substr(20, 4).c_str())) * (M_PI/180.0);
+                float gzf = * (reinterpret_cast<float const*> (packet.substr(24, 4).c_str())) * (M_PI/180.0);
 
                 // get acelerometer values
                 // calculate accelerations in m/s²
-                float axf = * (reinterpret_cast<float const*> (packet.substr(30, 4).c_str()));
-                float ayf = * (reinterpret_cast<float const*> (packet.substr(34, 4).c_str()));
-                float azf = * (reinterpret_cast<float const*> (packet.substr(38, 4).c_str()));
+                float axf = * (reinterpret_cast<float const*> (packet.substr(28, 4).c_str()));
+                float ayf = * (reinterpret_cast<float const*> (packet.substr(32, 4).c_str()));
+                float azf = * (reinterpret_cast<float const*> (packet.substr(36, 4).c_str()));
 
-                uint32_t received_packet_number = *(reinterpret_cast<float const*> (packet.substr(42, 4).c_str()));
+                unsigned int received_packet_number = *(reinterpret_cast< unsigned int const*> (packet.substr(40, 4).c_str()));
                 
                 ROS_DEBUG("received packet number: %d", received_packet_number);
 
