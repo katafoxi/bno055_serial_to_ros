@@ -197,11 +197,11 @@ int main(int argc, char** argv)
                   transform.setRotation(differential_rotation);
                   tf_br.sendTransform(tf::StampedTransform(transform, measurement_time, tf_parent_frame_id, tf_frame_id));
                 }
-                input.erase(0, data_packet_start + (expected_packet_size-2)); // delete everything up to and including the processed packet
+                input.erase(0, data_packet_start + expected_packet_size); // delete everything up to and including the processed packet
               }
               else
               {
-                if (input.length() >= data_packet_start + (expected_packet_size-2))
+                if (input.length() >= data_packet_start + expected_packet_size)
                 {
                   input.erase(0, data_packet_start + 1); // delete up to false data_packet_start character so it is not found again
                 }
