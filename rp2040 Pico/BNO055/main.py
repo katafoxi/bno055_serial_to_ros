@@ -19,7 +19,8 @@ time.sleep_ms(500)
 #RaspberryPico hardware I2C
 i2c = machine.I2C(0, scl=machine.Pin(5), sda=machine.Pin(4),  timeout=100_000)
 imu = BNO055(i2c)
-led = Pin(25, Pin.OUT)
+led = Pin(25, Pin.OUT)      # for Pico
+#led = Pin("LED", Pin.OUT)  # for Pico W
 led.off()
 trigger=Pin(28, Pin.OUT)
 
