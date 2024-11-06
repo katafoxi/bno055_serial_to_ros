@@ -1,6 +1,7 @@
 #include <geometry_msgs/Quaternion.h>
 #include <ros/ros.h>
 #include <serial/serial.h>
+#include <sensor_msgs/TimeReference.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Temperature.h>
 #include <std_msgs/String.h>
@@ -88,7 +89,7 @@ int main(int argc, char** argv)
   std::string input;
   std::string read;
 
-  int expected_packet_size = 48;
+  int expected_packet_size = 52;
 
   while(ros::ok())
   {
@@ -172,8 +173,24 @@ int main(int argc, char** argv)
                 }
                 last_received_packet_number = received_packet_number;
 
+                //irq_timestamp 
+                unsigned int irq_timestamp = *(reinterpret_cast< unsigned int const*> (packet.substr(44, 4).c_str()));
+
+                
+                ros::Publisher trigger_time_pub = nh.advertise<sensor_msgs::TimeReference>("trigger_time", 50);
+                sensor_msgs::TimeReference trigger_time_msg;
+
+                ros::Time measurement_time(irq_timestamp / 1000, (irq_timestamp % 1000) * 1000*1000);  // sec, nsec    
+
+                //Publish the message timestamp
+                ros::Time time_ref(0, 0);
+                trigger_time_msg.header.frame_id = frame_id;
+                trigger_time_msg.header.stamp = measurement_time;
+                trigger_time_msg.time_ref = time_ref;          
+                trigger_time_pub.publish(trigger_time_msg);
+
                 // calculate measurement time
-                ros::Time measurement_time = ros::Time::now() + ros::Duration(time_offset_in_seconds);
+                //ros::Time measurement_time = ros::Time::now() + ros::Duration(time_offset_in_seconds);
 
                 // publish imu packet
                 imu.header.stamp = measurement_time;
