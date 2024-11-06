@@ -244,26 +244,33 @@ void loop() {
         fifoCount -= packetSize;
 
         // display quaternion values in InvenSense Teapot demo format:
-        teapotPacket[2] = fifoBuffer[0];
+        teapotPacket[2] = fifoBuffer[0];    //`w`
         teapotPacket[3] = fifoBuffer[1];
-        teapotPacket[4] = fifoBuffer[4];
+
+        teapotPacket[4] = fifoBuffer[4];    //`x`
         teapotPacket[5] = fifoBuffer[5];
-        teapotPacket[6] = fifoBuffer[8];
+
+        teapotPacket[6] = fifoBuffer[8];    //`y`
         teapotPacket[7] = fifoBuffer[9];
-        teapotPacket[8] = fifoBuffer[12];
+
+        teapotPacket[8] = fifoBuffer[12];   //`z`
         teapotPacket[9] = fifoBuffer[13];
         // gyro values
         teapotPacket[10] = fifoBuffer[16];
         teapotPacket[11] = fifoBuffer[17];
+
         teapotPacket[12] = fifoBuffer[20];
         teapotPacket[13] = fifoBuffer[21];
+
         teapotPacket[14] = fifoBuffer[24];
         teapotPacket[15] = fifoBuffer[25];
         // accelerometer values
         teapotPacket[16] = fifoBuffer[28];
         teapotPacket[17] = fifoBuffer[29];
+
         teapotPacket[18] = fifoBuffer[32];
         teapotPacket[19] = fifoBuffer[33];
+
         teapotPacket[20] = fifoBuffer[36];
         teapotPacket[21] = fifoBuffer[37];
         //temperature
